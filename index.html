@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="manifest" href="manifest.json" />
+        <title>DA2lY</title>
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: #000;
+                color: #fff;
+                font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+                    sans-serif;
+            }
+            #app {
+                max-width: 430px;
+                margin: 0 auto;
+                min-height: 100vh;
+                padding-bottom: 90px;
+            }
+            .app-header {
+                padding: 16px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .app-header h1 {
+                font-size: 22px;
+            }
+            .app-header button {
+                font-size: 26px;
+                background: none;
+                border: none;
+                color: #0aff9d;
+            }
+            main {
+                padding: 20px;
+            }
+            .view {
+                display: none;
+            }
+            .view.active {
+                display: block;
+            }
+            h2 {
+                color: #aaa;
+                margin-bottom: 12px;
+            }
+            .mt {
+                margin-top: 28px;
+            }
+
+            /* ROUTINE */
+            #routineGrid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            .routine {
+                background: #111;
+                border-radius: 16px;
+                padding: 18px;
+                text-align: center;
+            }
+            .routine.done {
+                background: #0aff9d;
+                color: #000;
+            }
+
+            /* TODO */
+            .todo {
+                background: #111;
+                border-radius: 16px;
+                padding: 16px;
+                margin-bottom: 10px;
+            }
+            .todo.done {
+                opacity: 0.4;
+                text-decoration: line-through;
+            }
+
+            /* CALENDAR */
+            .calendar-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 6px;
+            }
+            .calendar-day {
+                padding: 10px 0;
+                background: #111;
+                border-radius: 10px;
+                text-align: center;
+            }
+            .calendar-day.active {
+                background: #0aff9d;
+                color: #000;
+            }
+
+            /* STATS */
+            .stat-item {
+                background: #111;
+                border-radius: 14px;
+                padding: 14px;
+                margin-bottom: 10px;
+            }
+            .stat-title {
+                display: flex;
+                justify-content: space-between;
+                font-size: 14px;
+                color: #aaa;
+            }
+            .progress-bar {
+                height: 8px;
+                background: #222;
+                border-radius: 4px;
+                overflow: hidden;
+                margin-top: 6px;
+            }
+            .progress-bar span {
+                display: block;
+                height: 100%;
+                background: #0aff9d;
+            }
+
+            /* TAB */
+            .tab-bar {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                max-width: 430px;
+                display: flex;
+                justify-content: space-around;
+                background: #000;
+                border-top: 1px solid #222;
+            }
+            .tab-bar button {
+                padding: 12px;
+                background: none;
+                border: none;
+                color: #666;
+            }
+            .tab-bar button.active {
+                color: #0aff9d;
+            }
+
+            /* ACTION SHEET */
+            #sheet {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: flex-end;
+            }
+            #sheet.hidden {
+                display: none;
+            }
+            .sheet-box {
+                width: 100%;
+                background: #111;
+                padding: 16px;
+                border-radius: 20px 20px 0 0;
+            }
+            .sheet-title {
+                text-align: center;
+                color: #aaa;
+                margin-bottom: 12px;
+            }
+            #miniCalendar {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 6px;
+            }
+            #miniCalendar .day {
+                padding: 8px 0;
+                background: #222;
+                border-radius: 8px;
+                text-align: center;
+            }
+            .sheet-box button {
+                width: 100%;
+                padding: 14px;
+                border-radius: 12px;
+                background: #222;
+                border: none;
+                color: #fff;
+                margin-top: 8px;
+            }
+            .danger {
+                color: #ff5555;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="app">
+            <header class="app-header">
+                <h1>DA2lY</h1>
+                <button id="addBtn">＋</button>
+            </header>
+
+            <main>
+                <section id="todayView" class="view active">
+                    <h2>매일 할 일</h2>
+                    <div id="routineGrid"></div>
+
+                    <h2 class="mt">오늘 할 일</h2>
+                    <div id="todayTodos"></div>
+                </section>
+
+                <section id="todoView" class="view">
+                    <h2>모든 할 일</h2>
+                    <div id="todoList"></div>
+                </section>
+
+                <section id="calendarView" class="view">
+                    <h2 id="calendarTitle"></h2>
+                    <div id="calendar" class="calendar-grid"></div>
+                    <h2 class="mt">이 날짜의 할 일</h2>
+                    <div id="calendarTodos"></div>
+                </section>
+
+                <section id="statsView" class="view">
+                    <h2>이번 달 요약</h2>
+                    <div id="statsSummary"></div>
+                    <h2 class="mt">루틴별 성취도</h2>
+                    <div id="statsDetail"></div>
+                </section>
+            </main>
+
+            <nav class="tab-bar">
+                <button data-view="todayView" class="active">오늘</button>
+                <button data-view="todoView">할 일</button>
+                <button data-view="calendarView">달력</button>
+                <button data-view="statsView">통계</button>
+            </nav>
+
+            <div id="sheet" class="hidden">
+                <div class="sheet-box">
+                    <div class="sheet-title">날짜 선택</div>
+                    <div id="miniCalendar"></div>
+                    <button id="removeTodo" class="danger">삭제</button>
+                    <button id="closeSheet">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            /* ===== CONSTANT ===== */
+            const ROUTINE_KEYS = [
+                '운동',
+                '물 마시기',
+                '쉐이크 1',
+                '쉐이크 2',
+                '복근 운동',
+                '세수(아침)',
+                '세수(저녁)',
+                '침대 정리',
+            ];
+
+            /* ===== UTIL ===== */
+            const today = () => new Date().toISOString().slice(0, 10);
+            const monthKey = () => today().slice(0, 7);
+            const daysInMonth = (y, m) => new Date(y, m, 0).getDate();
+
+            /* ===== STATE ===== */
+            let todos = JSON.parse(localStorage.getItem('da2ly_todos')) || [];
+            let routines =
+                JSON.parse(localStorage.getItem('da2ly_routines')) || {};
+            let selectedTodoIndex = null;
+            let selectedCalendarDate = today();
+
+            /* ===== ROUTINE ===== */
+            function ensureRoutine(date) {
+                if (routines[date]) return;
+                routines[date] = {};
+                ROUTINE_KEYS.forEach((k) => (routines[date][k] = false));
+            }
+
+            /* ===== TODAY ===== */
+            function renderToday() {
+                ensureRoutine(today());
+                const grid = document.getElementById('routineGrid');
+                const todayTodos = document.getElementById('todayTodos');
+                grid.innerHTML = '';
+                todayTodos.innerHTML = '';
+                ROUTINE_KEYS.forEach((k) => {
+                    const done = routines[today()][k];
+                    const d = document.createElement('div');
+                    d.className = 'routine' + (done ? ' done' : '');
+                    d.textContent = k;
+                    d.onclick = () => {
+                        routines[today()][k] = !done;
+                        save();
+                    };
+                    grid.appendChild(d);
+                });
+                todos
+                    .filter((t) => t.date === today() && !t.done)
+                    .forEach((t) => {
+                        const d = document.createElement('div');
+                        d.className = 'todo';
+                        d.textContent = t.text;
+                        d.onclick = () => {
+                            t.done = true;
+                            save();
+                        };
+                        todayTodos.appendChild(d);
+                    });
+            }
+
+            /* ===== TODOS ===== */
+            function renderTodos() {
+                const list = document.getElementById('todoList');
+                list.innerHTML = '';
+                todos
+                    .filter((t) => !t.done)
+                    .forEach((t, i) => {
+                        const d = document.createElement('div');
+                        d.className = 'todo';
+                        d.textContent = t.text;
+                        d.onclick = () => {
+                            selectedTodoIndex = i;
+                            openSheet();
+                        };
+                        list.appendChild(d);
+                    });
+            }
+
+            /* ===== CALENDAR ===== */
+            function renderCalendar(containerId, click) {
+                const c = document.getElementById(containerId);
+                c.innerHTML = '';
+                const now = new Date();
+                const y = now.getFullYear(),
+                    m = now.getMonth() + 1;
+                const total = daysInMonth(y, m);
+                for (let i = 1; i <= total; i++) {
+                    const date = `${y}-${String(m).padStart(2, '0')}-${String(
+                        i
+                    ).padStart(2, '0')}`;
+                    const d = document.createElement('div');
+                    d.className =
+                        'calendar-day' +
+                        (date === selectedCalendarDate ? ' active' : '');
+                    d.textContent = i;
+                    d.onclick = () => click(date);
+                    c.appendChild(d);
+                }
+            }
+
+            function renderCalendarView() {
+                document.getElementById('calendarTitle').textContent =
+                    monthKey();
+                renderCalendar('calendar', (date) => {
+                    selectedCalendarDate = date;
+                    renderCalendarView();
+                    renderCalendarTodos();
+                });
+                renderCalendarTodos();
+            }
+
+            function renderCalendarTodos() {
+                const list = document.getElementById('calendarTodos');
+                list.innerHTML = '';
+                todos
+                    .filter((t) => t.date === selectedCalendarDate)
+                    .forEach((t) => {
+                        const d = document.createElement('div');
+                        d.className = 'todo' + (t.done ? ' done' : '');
+                        d.textContent = t.text;
+                        list.appendChild(d);
+                    });
+            }
+
+            /* ===== ACTION SHEET ===== */
+            function openSheet() {
+                document.getElementById('sheet').classList.remove('hidden');
+                renderCalendar('miniCalendar', (date) => {
+                    todos[selectedTodoIndex].date = date;
+                    closeSheet();
+                    save();
+                });
+            }
+            function closeSheet() {
+                document.getElementById('sheet').classList.add('hidden');
+            }
+            document.getElementById('closeSheet').onclick = closeSheet;
+            document.getElementById('removeTodo').onclick = () => {
+                todos.splice(selectedTodoIndex, 1);
+                closeSheet();
+                save();
+            };
+
+            /* ===== STATS ===== */
+            function renderStats() {
+                const summary = document.getElementById('statsSummary');
+                const detail = document.getElementById('statsDetail');
+                summary.innerHTML = '';
+                detail.innerHTML = '';
+                const [y, m] = monthKey().split('-');
+                const totalDays = daysInMonth(+y, +m);
+                let totalDone = 0;
+                ROUTINE_KEYS.forEach((k) => {
+                    let doneCount = 0;
+                    Object.keys(routines).forEach((d) => {
+                        if (d.startsWith(monthKey()) && routines[d][k])
+                            doneCount++;
+                    });
+                    totalDone += doneCount;
+                    const percent = Math.round((doneCount / totalDays) * 100);
+                    const item = document.createElement('div');
+                    item.className = 'stat-item';
+                    item.innerHTML = `
+     <div class="stat-title">
+       <span>${k}</span>
+       <span>${doneCount}/${totalDays} (${percent}%)</span>
+     </div>
+     <div class="progress-bar">
+       <span style="width:${percent}%"></span>
+     </div>`;
+                    detail.appendChild(item);
+                });
+                const overall = Math.round(
+                    (totalDone / (ROUTINE_KEYS.length * totalDays)) * 100
+                );
+                summary.textContent = `이번 달 전체 성실도 ${overall}%`;
+            }
+
+            /* ===== ADD TODO ===== */
+            document.getElementById('addBtn').onclick = () => {
+                const t = prompt('할 일을 입력하세요');
+                if (t) {
+                    todos.push({ text: t, date: null, done: false });
+                    save();
+                }
+            };
+
+            /* ===== TAB ===== */
+            document.querySelectorAll('.tab-bar button').forEach((btn) => {
+                btn.onclick = () => {
+                    document
+                        .querySelectorAll('.tab-bar button')
+                        .forEach((b) => b.classList.remove('active'));
+                    document
+                        .querySelectorAll('.view')
+                        .forEach((v) => v.classList.remove('active'));
+                    btn.classList.add('active');
+                    document
+                        .getElementById(btn.dataset.view)
+                        .classList.add('active');
+                    if (btn.dataset.view === 'calendarView')
+                        renderCalendarView();
+                    if (btn.dataset.view === 'statsView') renderStats();
+                };
+            });
+
+            /* ===== SAVE ===== */
+            function save() {
+                localStorage.setItem('da2ly_todos', JSON.stringify(todos));
+                localStorage.setItem(
+                    'da2ly_routines',
+                    JSON.stringify(routines)
+                );
+                renderToday();
+                renderTodos();
+            }
+
+            /* INIT */
+            renderToday();
+            renderTodos();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./service-worker.js');
+            }
+        </script>
+    </body>
+</html>
